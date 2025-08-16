@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Guess the Grammar</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #1a1a2e;
+            font-family: Arial, sans-serif;
+            color: white;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        #flashcard {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            margin: 10px 0;
+        }
+        #sentence {
+            font-size: 16px;
+            line-height: 1.5;
+            min-height: 60px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 5px;
+            color: #000;
+        }
+        .grammar-word {
+            padding: 2px 5px;
+            border-radius: 3px;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        .grammar-noun { color: #00008B; font-weight: bold; }
+        .grammar-verb { color: #FF0000; font-weight: bold; }
+        .grammar-adjective { color: #006400; }
+        .grammar-adverb { color: #FF7F50; }
+        .grammar-article { color: #FFD700; }
+        .grammar-preposition { color: #90EE90; }
+        .grammar-conjunction { color: #4A4A4A; }
+        .grammar-pronoun { color: #4682B4; }
+        .selected-word { border: 2px solid #000; }
+        #choices {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin: 15px 0;
+        }
+        .choice-btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .choice-btn:active {
+            background-color: #0056b3;
+        }
+        #ui {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        #start-button {
+            padding: 8px 16px;
+            font-size: 16px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        #start-button:active {
+            background-color: #218838;
+        }
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: left;
+            display: none;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        #restart-button {
+            padding: 8px 16px;
+            font-size: 14px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        #restart-button:active {
+            background-color: #218838;
+        }
+        #feedback {
+            font-size: 20px;
+            margin-top: 10px;
+            text-align: center;
+            display: none;
+            pointer-events: none;
+        }
+        .starburst {
+            color: #FFD700;
+            font-size: 90px;
+            animation: starburst 0.5s ease-out;
+        }
+        .cross {
+            color: #FF0000;
+            font-size: 90px;
+        }
+        #correct-answer {
+            font-size: 16px;
+            color: #FFD700;
+            margin-top: 5px;
+        }
+        #results-list {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .correct { color: #28a745; }
+        .incorrect { color: #FF0000; }
+        @keyframes starburst {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="ui">
+            <span id="score">Score: 0</span>
+            <span id="timer">Time: 60</span>
+            <span id="high-score">High Score: 0</span>
+        </div>
+        <div id="flashcard">
+            <div id="sentence"></div>
+        </div>
+        <div id="choices"></div>
+        <div id="feedback"></div>
+        <button id="start-button">Start Game</button>
+        <div id="game-over">
+            <h2>Game Over</h2>
+            <p id="final-score">Score: 0</p>
+            <div id="results-list"></div>
+            <button id="restart-button">Restart</button>
+        </div>
+    </div>
+
+    <script>
+        const sentenceDisplay = document.getElementById('sentence');
+        const choicesDisplay = document.getElementById('choices');
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const highScoreDisplay = document.getElementById('high-score');
+        const startButton = document.getElementById('start-button');
+        const gameOverScreen = document.getElementById('game-over');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const restartButton = document.getElementById('restart-button');
+        const feedbackDisplay = document.getElementById('feedback');
+        const resultsList = document.getElementById('results-list');
+
+        const sentences = [
+            [
+                { word: "The", type: "article" },
+                { word: "quick", type: "adjective" },
+                { word: "fox", type: "noun" },
+                { word: "jumped", type: "verb" },
+                { word: "over", type: "preposition" },
+                { word: "the", type: "article" },
+                { word: "lazy", type: "adjective" },
+                { word: "dog", type: "noun" },
+                { word: "and", type: "conjunction" },
+                { word: "ran", type: "verb" },
+                { word: "swiftly", type: "adverb" }
+            ],
+            [
+                { word: "She", type: "pronoun" },
+                { word: "sang", type: "verb" },
+                { word: "beautifully", type: "adverb" },
+                { word: "in", type: "preposition" },
+                { word: "the", type: "article" },
+                { word: "quiet", type: "adjective" },
+                { word: "valley", type: "noun" },
+                { word: "while", type: "conjunction" },
+                { word: "birds", type: "noun" },
+                { word: "listened", type: "verb" }
+            ],
+            [
+                { word: "A", type: "article" },
+                { word: "brave", type: "adjective" },
+                { word: "knight", type: "noun" },
+                { word: "fought", type: "verb" },
+                { word: "courageously", type: "adverb" },
+                { word: "against", type: "preposition" },
+                { word: "the", type: "article" },
+                { word: "fierce", type: "adjective" },
+                { word: "dragon", type: "noun" }
+            ]
+        ];
+
+        const partsOfSpeech = [
+            { name: "Noun", class: "grammar-noun" },
+            { name: "Verb", class: "grammar-verb" },
+            { name: "Adjective", class: "grammar-adjective" },
+            { name: "Adverb", class: "grammar-adverb" },
+            { name: "Article", class: "grammar-article" },
+            { name: "Preposition", class: "grammar-preposition" },
+            { name: "Conjunction", class: "grammar-conjunction" },
+            { name: "Pronoun", class: "grammar-pronoun" }
+        ];
+
+        let currentSentence = [];
+        let currentWordIndex = 0;
+        let score = 0;
+        let timeLeft = 60;
+        let highScore = localStorage.getItem('grammarHighScore') ? parseInt(localStorage.getItem('grammarHighScore')) : 0;
+        let isGameRunning = false;
+        let timerInterval = null;
+        let answerHistory = [];
+
+        highScoreDisplay.textContent = `High Score: ${highScore}`;
+
+        function displaySentence() {
+            sentenceDisplay.innerHTML = '';
+            if (!currentSentence || !currentSentence.length) {
+                // console.log('Error: No valid sentence to display');
+                return;
+            }
+            currentSentence.forEach((wordObj, index) => {
+                const span = document.createElement('span');
+                span.textContent = wordObj.word;
+                span.classList.add('grammar-word', `grammar-${wordObj.type}`);
+                if (index === currentWordIndex) {
+                    span.classList.add('selected-word');
+                }
+                span.dataset.index = index;
+                span.addEventListener('click', () => {
+                    if (isGameRunning && parseInt(span.dataset.index) !== currentWordIndex) {
+                        currentWordIndex = parseInt(span.dataset.index);
+                        displaySentence();
+                        displayChoices();
+                    }
+                });
+                sentenceDisplay.appendChild(span);
+            });
+        }
+
+        function displayChoices() {
+            choicesDisplay.innerHTML = '';
+            if (!currentSentence || typeof currentWordIndex !== 'number' || currentWordIndex >= currentSentence.length) {
+                // console.log('Error: Invalid sentence or word index', { currentSentence, currentWordIndex });
+                return;
+            }
+            const correctType = currentSentence[currentWordIndex].type;
+            const shuffledParts = [...partsOfSpeech].sort(() => Math.random() - 0.5).slice(0, 4);
+            if (!shuffledParts.some(part => part.name.toLowerCase() === correctType)) {
+                const correctPart = partsOfSpeech.find(part => part.name.toLowerCase() === correctType);
+                shuffledParts[Math.floor(Math.random() * 4)] = correctPart;
+            }
+            shuffledParts.forEach(part => {
+                const btn = document.createElement('button');
+                btn.textContent = part.name;
+                btn.classList.add('choice-btn');
+                btn.addEventListener('click', () => {
+                    if (isGameRunning) {
+                        checkAnswer(part.name.toLowerCase());
+                    }
+                });
+                choicesDisplay.appendChild(btn);
+            });
+        }
+
+        function showFeedback(isCorrect, correctType) {
+            feedbackDisplay.style.display = 'block';
+            if (isCorrect) {
+                feedbackDisplay.innerHTML = '<span class="starburst">✨</span>';
+                setTimeout(() => {
+                    feedbackDisplay.style.display = 'none';
+                    feedbackDisplay.innerHTML = '';
+                }, 500);
+            } else {
+                feedbackDisplay.innerHTML = `<span class="cross">✗</span><div id="correct-answer">Correct: ${correctType.charAt(0).toUpperCase() + correctType.slice(1)}</div>`;
+                setTimeout(() => {
+                    feedbackDisplay.style.display = 'none';
+                    feedbackDisplay.innerHTML = '';
+                }, 1000);
+            }
+        }
+
+        function checkAnswer(selectedType) {
+            if (!currentSentence || typeof currentWordIndex !== 'number' || currentWordIndex >= currentSentence.length) {
+                // console.log('Error: Invalid sentence or word index in checkAnswer', { currentSentence, currentWordIndex });
+                return;
+            }
+            const correctType = currentSentence[currentWordIndex].type;
+            const isCorrect = selectedType === correctType;
+            answerHistory.push({
+                word: currentSentence[currentWordIndex].word,
+                correctType: correctType,
+                isCorrect: isCorrect,
+                selectedType: selectedType
+            });
+            if (isCorrect) {
+                score += 10;
+            } else {
+                score = Math.max(0, score - 5);
+            }
+            scoreDisplay.textContent = `Score: ${score}`;
+            showFeedback(isCorrect, correctType);
+            currentWordIndex++;
+            if (currentWordIndex >= currentSentence.length) {
+                currentSentence = sentences[Math.floor(Math.random() * sentences.length)];
+                currentWordIndex = 0;
+            }
+            displaySentence();
+            displayChoices();
+        }
+
+        function displayResults() {
+            resultsList.innerHTML = '<h3>Results:</h3>';
+            if (answerHistory.length === 0) {
+                resultsList.innerHTML += '<p>No answers submitted.</p>';
+                return;
+            }
+            const ul = document.createElement('ul');
+            answerHistory.forEach(answer => {
+                const li = document.createElement('li');
+                const status = answer.isCorrect ? 'Correct' : `Incorrect (Guessed: ${answer.selectedType})`;
+                li.innerHTML = `"${answer.word}" - ${answer.correctType.charAt(0).toUpperCase() + answer.correctType.slice(1)} (<span class="${answer.isCorrect ? 'correct' : 'incorrect'}">${status}</span>)`;
+                ul.appendChild(li);
+            });
+            resultsList.appendChild(ul);
+        }
+
+        function startGame() {
+            if (isGameRunning) return;
+            isGameRunning = true;
+            score = 0;
+            timeLeft = 60;
+            answerHistory = [];
+            currentSentence = sentences[Math.floor(Math.random() * sentences.length)];
+            currentWordIndex = 0;
+            scoreDisplay.textContent = `Score: ${score}`;
+            timerDisplay.textContent = `Time: ${timeLeft}`;
+            startButton.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            feedbackDisplay.style.display = 'none';
+            resultsList.innerHTML = '';
+            displaySentence();
+            displayChoices();
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = `Time: ${timeLeft}`;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            if (!isGameRunning) return;
+            isGameRunning = false;
+            if (timerInterval) clearInterval(timerInterval);
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('grammarHighScore', highScore);
+                highScoreDisplay.textContent = `High Score: ${highScore}`;
+            }
+            finalScoreDisplay.textContent = `Score: ${score}`;
+            displayResults();
+            gameOverScreen.style.display = 'block';
+        }
+
+        // Prevent default touch behaviors
+        document.addEventListener('touchstart', (e) => {
+            if (!e.target.closest('button') && !e.target.closest('.grammar-word')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', startGame);
+
+        // Initialize with a random sentence
+        currentSentence = sentences[Math.floor(Math.random() * sentences.length)];
+        displaySentence();
+        displayChoices();
+    </script>
+</body>
+</html>
