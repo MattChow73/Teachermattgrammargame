@@ -107,12 +107,15 @@
             left: 50%;
             transform: translate(-50%, -50%);
             background-color: rgba(0, 0, 0, 0.8);
-            padding: 15px;
+            padding: 10px;
             border-radius: 10px;
             text-align: left;
             display: none;
-            max-height: 80vh;
+            max-height: 70vh;
+            width: 90%;
+            max-width: 360px;
             overflow-y: auto;
+            font-size: 12px;
         }
         #restart-button {
             padding: 8px 16px;
@@ -128,35 +131,44 @@
             background-color: #218838;
         }
         #feedback {
-            font-size: 20px;
-            margin-top: 10px;
-            text-align: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             display: none;
             pointer-events: none;
         }
-        .starburst {
-            color: #FFD700;
+        .feedback-symbol {
+            position: absolute;
             font-size: 90px;
+            animation: starburst 0.5s ease-out;
+        }
+        .starburst {
             animation: starburst 0.5s ease-out;
         }
         .cross {
             color: #FF0000;
-            font-size: 90px;
+            animation: starburst 0.7s ease-out;
         }
         #correct-answer {
+            position: absolute;
             font-size: 16px;
             color: #FFD700;
-            margin-top: 5px;
+            text-align: center;
+            width: 100%;
+            top: 50%;
+            transform: translateY(-50%);
         }
         #results-list {
             margin-top: 10px;
-            font-size: 14px;
+            font-size: 12px;
         }
         .correct { color: #28a745; }
         .incorrect { color: #FF0000; }
         @keyframes starburst {
             0% { transform: scale(0); opacity: 1; }
-            100% { transform: scale(2); opacity: 0; }
+            100% { transform: scale(1.5); opacity: 0; }
         }
     </style>
 </head>
@@ -244,6 +256,19 @@
             { name: "Pronoun", class: "grammar-pronoun" }
         ];
 
+        const speechTips = {
+            noun: "Nouns name things like fox or dog.",
+            verb: "Verbs show actions like jump or run.",
+            adjective: "Adjectives describe nouns, like quick or lazy.",
+            adverb: "Adverbs modify verbs, like swiftly or beautifully.",
+            article: "Articles are words like the or a.",
+            preposition: "Prepositions show relationships, like over or in.",
+            conjunction: "Conjunctions connect words, like and or while.",
+            pronoun: "Pronouns replace nouns, like she or he."
+        };
+
+        const correctSynonyms = ["Great", "Awesome", "Fantastic", "Superb", "Excellent"];
+
         let currentSentence = [];
         let currentWordIndex = 0;
         let score = 0;
@@ -255,8 +280,29 @@
 
         highScoreDisplay.textContent = `High Score: ${highScore}`;
 
+        // Speech synthesis for voice feedback
+        function speak(text, isMaleVoice) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US';
+                const voices = window.speechSynthesis.getVoices();
+                const maleVoice = voices.find(voice => voice.name.toLowerCase().includes('male') || voice.name.toLowerCase().includes('david') || voice.name.toLowerCase().includes('mark')) || voices[0];
+                utterance.voice = maleVoice;
+                utterance.volume = 1.0;
+                utterance.rate = 1.0;
+                utterance.pitch = isMaleVoice ? 0.8 : 1.0;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Preload voices
+        window.speechSynthesis.onvoiceschanged = () => {
+            // Triggered when voices are loaded
+        };
+
         function displaySentence() {
             sentenceDisplay.innerHTML = '';
+            feedbackDisplay.style.display = 'none';
             if (!currentSentence || !currentSentence.length) {
                 // console.log('Error: No valid sentence to display');
                 return;
@@ -306,15 +352,45 @@
         }
 
         function showFeedback(isCorrect, correctType) {
+            feedbackDisplay.innerHTML = '';
             feedbackDisplay.style.display = 'block';
+            const containerRect = document.getElementById('game-container').getBoundingClientRect();
+            const containerWidth = containerRect.width;
+            const containerHeight = containerRect.height;
+            const symbolCount = 10;
+            const colors = ['#FFD700', '#FF0000', '#0000FF', '#00FF00', '#FF7F50'];
+
             if (isCorrect) {
-                feedbackDisplay.innerHTML = '<span class="starburst">✨</span>';
+                for (let i = 0; i < symbolCount; i++) {
+                    const span = document.createElement('span');
+                    span.textContent = '✨';
+                    span.classList.add('feedback-symbol', 'starburst');
+                    span.style.color = colors[Math.floor(Math.random() * colors.length)];
+                    span.style.left = `${Math.random() * containerWidth}px`;
+                    span.style.top = `${Math.random() * containerHeight}px`;
+                    span.style.animationDuration = `${0.4 + Math.random() * 0.2}s`;
+                    feedbackDisplay.appendChild(span);
+                }
+                speak(correctSynonyms[Math.floor(Math.random() * correctSynonyms.length)], true);
                 setTimeout(() => {
                     feedbackDisplay.style.display = 'none';
                     feedbackDisplay.innerHTML = '';
                 }, 500);
             } else {
-                feedbackDisplay.innerHTML = `<span class="cross">✗</span><div id="correct-answer">Correct: ${correctType.charAt(0).toUpperCase() + correctType.slice(1)}</div>`;
+                for (let i = 0; i < symbolCount; i++) {
+                    const span = document.createElement('span');
+                    span.textContent = '✗';
+                    span.classList.add('feedback-symbol', 'cross');
+                    span.style.left = `${Math.random() * containerWidth}px`;
+                    span.style.top = `${Math.random() * containerHeight}px`;
+                    span.style.animationDuration = `${0.6 + Math.random() * 0.2}s`;
+                    feedbackDisplay.appendChild(span);
+                }
+                const correctAnswerDiv = document.createElement('div');
+                correctAnswerDiv.id = 'correct-answer';
+                correctAnswerDiv.textContent = `Correct: ${correctType.charAt(0).toUpperCase() + correctType.slice(1)}`;
+                feedbackDisplay.appendChild(correctAnswerDiv);
+                speak("Oh, try the next one", true);
                 setTimeout(() => {
                     feedbackDisplay.style.display = 'none';
                     feedbackDisplay.innerHTML = '';
@@ -355,6 +431,7 @@
             resultsList.innerHTML = '<h3>Results:</h3>';
             if (answerHistory.length === 0) {
                 resultsList.innerHTML += '<p>No answers submitted.</p>';
+                speak("Wow, fantastic, try again to beat your score", true);
                 return;
             }
             const ul = document.createElement('ul');
@@ -365,6 +442,18 @@
                 ul.appendChild(li);
             });
             resultsList.appendChild(ul);
+            // Speak game-over message and incorrect answers summary
+            const incorrectAnswers = answerHistory.filter(answer => !answer.isCorrect);
+            let speechText = "Wow, fantastic, try again to beat your score.";
+            if (incorrectAnswers.length > 0) {
+                speechText += " You got some wrong. ";
+                incorrectAnswers.forEach(answer => {
+                    speechText += `For "${answer.word}", the correct answer was ${answer.correctType}. ${speechTips[answer.correctType] || "Review this part of speech."} `;
+                });
+            } else {
+                speechText += " You got all answers correct! Keep it up!";
+            }
+            speak(speechText, true);
         }
 
         function startGame() {
