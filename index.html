@@ -281,16 +281,16 @@
         highScoreDisplay.textContent = `High Score: ${highScore}`;
 
         // Speech synthesis for voice feedback
-        function speak(text, isMaleVoice) {
+        function speak(text) {
             if ('speechSynthesis' in window) {
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'en-US';
+                utterance.lang = 'en-GB';
                 const voices = window.speechSynthesis.getVoices();
-                const maleVoice = voices.find(voice => voice.name.toLowerCase().includes('male') || voice.name.toLowerCase().includes('david') || voice.name.toLowerCase().includes('mark')) || voices[0];
-                utterance.voice = maleVoice;
+                const femaleVoice = voices.find(voice => voice.name.toLowerCase().includes('female') || voice.name.toLowerCase().includes('samantha') || voice.name.toLowerCase().includes('serena')) || voices.find(voice => voice.lang === 'en-GB') || voices[0];
+                utterance.voice = femaleVoice;
                 utterance.volume = 1.0;
                 utterance.rate = 1.0;
-                utterance.pitch = isMaleVoice ? 0.8 : 1.0;
+                utterance.pitch = 1.0; // Normal pitch for female voice
                 window.speechSynthesis.speak(utterance);
             }
         }
@@ -371,7 +371,7 @@
                     span.style.animationDuration = `${0.4 + Math.random() * 0.2}s`;
                     feedbackDisplay.appendChild(span);
                 }
-                speak(correctSynonyms[Math.floor(Math.random() * correctSynonyms.length)], true);
+                speak(correctSynonyms[Math.floor(Math.random() * correctSynonyms.length)]);
                 setTimeout(() => {
                     feedbackDisplay.style.display = 'none';
                     feedbackDisplay.innerHTML = '';
@@ -390,7 +390,7 @@
                 correctAnswerDiv.id = 'correct-answer';
                 correctAnswerDiv.textContent = `Correct: ${correctType.charAt(0).toUpperCase() + correctType.slice(1)}`;
                 feedbackDisplay.appendChild(correctAnswerDiv);
-                speak("Oh, try the next one", true);
+                speak("Oh, try the next one");
                 setTimeout(() => {
                     feedbackDisplay.style.display = 'none';
                     feedbackDisplay.innerHTML = '';
@@ -431,7 +431,7 @@
             resultsList.innerHTML = '<h3>Results:</h3>';
             if (answerHistory.length === 0) {
                 resultsList.innerHTML += '<p>No answers submitted.</p>';
-                speak("Wow, fantastic, try again to beat your score", true);
+                speak("Wow, fantastic, try again to beat your score");
                 return;
             }
             const ul = document.createElement('ul');
@@ -453,7 +453,7 @@
             } else {
                 speechText += " You got all answers correct! Keep it up!";
             }
-            speak(speechText, true);
+            speak(speechText);
         }
 
         function startGame() {
